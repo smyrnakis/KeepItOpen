@@ -57,7 +57,7 @@ namespace keepItOpen
 
                     // ~~~ Getting file path (and file type)
 
-                    if ()
+                    if (true)
                     {
 
                     }
