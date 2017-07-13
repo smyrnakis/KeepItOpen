@@ -1,4 +1,20 @@
-﻿using System;
+﻿/* License:
+The MIT License (MIT)
+Copyright (c) 2017 - apostolos.smyrnakis@cern.ch - IT/CDA/AD
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), 
+to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+IN THE SOFTWARE.
+*/
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,94 +24,168 @@ using Word = Microsoft.Office.Interop.Word;
 using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Text.RegularExpressions;
+using System.IO;
+using KeepItOpen;
 
 namespace keepItOpen
 {
-    class Program
+    public class Program
     {
-        bool fileOpen = false;
-
-        string fileMode = "";
-        string filePath = "";
-        int timeToKeepOpen = 1;
-
-        private void Main(string[] args)
+        // ------------------------------------ MAIN function ------------------------------------
+        [STAThread]
+        static void Main(string[] args)
         {
-            if (args.Length <= 0)
+            displayArguments dArgs = new displayArguments();
+            fileHandler fHand = dArgs.getFileHandler();
+
+            if (args.Length == 0)
             {
                 Console.WriteLine("Please give arguments!");
                 Console.WriteLine();
                 Console.WriteLine();
-                Console.WriteLine("~~~~~~~~~~~~~~~~~~~~~~~~~~~ Available arguments ~~~~~~~~~~~~~~~~~~~~~~~");
+                Console.WriteLine("~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Available arguments ~~~~~~~~~~~~~~~~~~~~~~~~");
                 Console.WriteLine();
                 Console.WriteLine(" 'r' or 'w' : file in 'read' or 'write' mode");
-                Console.WriteLine(" <path> : path to word OR excel file to keep open");
-                Console.WriteLine(" <integer[1-3600]> : delay in seconds that file will be kept open");
+                Console.WriteLine(" file + <path> : path to word OR excel file to keep open");
+                Console.WriteLine(" delay1 + <integer[1-3600]> : delay in seconds that file will be kept open");
+                Console.WriteLine(" 'writeContent' : ONLY in 'write' mode: write some content in the file");
+                Console.WriteLine(" delay2 + <integer[0-3600]> : extra delay in seconds that file will be kept open");
+                Console.WriteLine(" 's' : silent mode - no confirmation asked");
                 Console.WriteLine();
-                Console.WriteLine("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+                Console.WriteLine("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
                 Console.WriteLine();
                 Console.WriteLine();
+                Console.WriteLine("Press any key to exit...");
+                Console.Read();
                 Environment.Exit(1);
             }
-            else
+            else     // ------------------------------- Get arguments and check validity -------------------------------
             {
                 try
                 {
-                    // ~~~ Getting mode (read or write)
-                    if ((args[1].ToLower() == "r") || (args[1].ToLower() == "w"))
+                    for (int argIdx = 0; argIdx < args.Length; argIdx++)
                     {
-                        fileMode = args[1];
+                        switch (args[argIdx])
+                        {
+                            case "r":
+                                fHand.fileMode = "r";
+                                break;
+                            case "w":
+                                fHand.fileMode = "w";
+                                break;
+                            case "file":
+                                fHand.filePath = Path.GetFullPath(@args[argIdx + 1]);
+                                break;
+                            case "delay1":
+                                fHand.timeToKeepOpen1 = Convert.ToInt32(args[argIdx + 1]);
+                                break;
+                            case "writeContent":
+                                fHand.writeContent = true;
+                                break;
+                            case "delay2":
+                                fHand.timeToKeepOpen2 = Convert.ToInt32(args[argIdx + 1]);
+                                break;
+                            case "s":
+                                fHand.silentMode = true;
+                                break;
+                            default:
+                                break;
+                        }
                     }
-                    else
+                    
+                    // ~~~~~~~~~~~~~~~~~~~~ Checking data validity ~~~~~~~~~~~~~~~~~~~~
+                    // ~~ r/w mode
+                    if ((fHand.fileMode != "r") && (fHand.fileMode != "w"))
                     {
                         Console.WriteLine();
-                        Console.WriteLine("Error in the first argument!");
+                        Console.WriteLine("Error in 'mode' argument!");
                         Console.WriteLine("'r' or 'w' : file in 'read' or 'write' mode");
                         Console.WriteLine();
+                        Console.Read();
                         Environment.Exit(1);
                     }
-
-                    // ~~~ Getting file path (and file type)
-
-                    if (true)
+                    // ~~ file path (and file type)
+                    if (File.Exists(fHand.filePath))
                     {
-
+                        string fileExtension = Path.GetExtension(fHand.filePath);             // 0: word , 1: excel , -1: other
+                        if ((fileExtension == ".doc") || (fileExtension == ".docx"))
+                            fHand.fileFormat = 0;   //  0 : word
+                        else if ((fileExtension == ".xls") || (fileExtension == ".xlsx"))
+                            fHand.fileFormat = 1;   //  1 : excel
+                        else
+                        {
+                            fHand.fileFormat = -1;  // -1 : other
+                            Console.WriteLine();
+                            Console.WriteLine("Wrong file format! Exiting application...");
+                            Console.WriteLine();
+                            Console.Read();
+                            Environment.Exit(1);
+                        }
                     }
                     else
                     {
                         Console.WriteLine();
-                        Console.WriteLine("Error in the second argument!");
-                        Console.WriteLine("<path> : path to word OR excel file to keep open");
+                        Console.WriteLine("Error! Path does not exist!");
+                        Console.WriteLine("Selected path: " + fHand.filePath.ToString());
+                        Console.WriteLine("file + <path> : path to word OR excel file to keep open");
                         Console.WriteLine();
+                        Console.Read();
                         Environment.Exit(1);
                     }
-
-                    // ~~~ Getting time in seconds
-                    if ((Convert.ToInt32(args[3]) >= 1) && (Convert.ToInt32(args[3]) <= 3600))
-                    {
-                        timeToKeepOpen = Convert.ToInt32(args[3]);
-                    }
-                    else
+                    // ~~ Getting 1st time delay in seconds
+                    if ((fHand.timeToKeepOpen1 < 1) || (fHand.timeToKeepOpen1 > 3600))
                     {
                         Console.WriteLine();
-                        Console.WriteLine("Error in the third argument!");
-                        Console.WriteLine("<integer[1 - 3600]> : delay in seconds that file will be kept open");
+                        Console.WriteLine("Error in 1st delay argument!");
+                        Console.WriteLine("delay1 + <integer[1 - 3600]> : delay in seconds that file will be kept open");
                         Console.WriteLine();
+                        Console.Read();
                         Environment.Exit(1);
                     }
+                    // ~~ add extra content to the file?
+                    if (fHand.writeContent == true)
+                    {
+                        if (fHand.fileMode == "r")
+                        {
+                            Console.WriteLine();
+                            Console.WriteLine("File opened in READ mode. 'writeContent' will be ignored!");
+                            Console.WriteLine();
+                            fHand.writeContent = false;
+                        }
+                    }
+                    // ~~ Getting 2nd time delay in seconds
+                    if ((fHand.timeToKeepOpen1 < 0) || (fHand.timeToKeepOpen1 > 3600))
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine("Error in 2nd delay argument!");
+                        Console.WriteLine("delay2 + <integer[0 - 3600]> : extra delay in seconds that file will be kept open");
+                        Console.WriteLine();
+                        Console.Read();
+                        Environment.Exit(1);
+                    }
+                    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error reading arguments!");
+                    Console.WriteLine("Error reading arguments! Check the order!");
                     Console.WriteLine(ex.Message);
                     Console.WriteLine();
+                    Console.Read();
                     Environment.Exit(1);
                 }
+            }       // ------------------------------------------------------------------------------------------------
 
-            }
+            // If NOT 'silent mode' switch, display arguments else continue with the program
+            if (!fHand.silentMode)
+                dArgs.displayArgs();
+            else
+                fHand.openFile();
+
+            Console.WriteLine();
+            Console.WriteLine("Press any key to exit...");
+            Console.Read();
+            Environment.Exit(0);        // Exiting
         }
         // ---------------------------------------------------------------------------------------
-
-
     }
 }
