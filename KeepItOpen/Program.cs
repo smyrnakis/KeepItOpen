@@ -48,8 +48,7 @@ namespace keepItOpen
                 Console.WriteLine(" 'r' or 'w' : file in 'read' or 'write' mode");
                 Console.WriteLine(" file + <path> : path to word OR excel file to keep open");
                 Console.WriteLine(" delay1 + <integer[1-3600]> : delay in seconds that file will be kept open");
-                Console.WriteLine(" 'writeContent' : ONLY in 'write' mode: write some content in the file");
-                Console.WriteLine(" delay2 + <integer[0-3600]> : extra delay in seconds that file will be kept open");
+                Console.WriteLine(" delay2 + <integer[0-3600]> : extra delay in seconds (ONLY in 'w' mode)");
                 Console.WriteLine(" 's' : silent mode - no confirmation asked");
                 Console.WriteLine();
                 Console.WriteLine("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
@@ -68,19 +67,16 @@ namespace keepItOpen
                         switch (args[argIdx])
                         {
                             case "r":
-                                fHand.fileMode = "r";
+                                fHand.openMode = "r";
                                 break;
                             case "w":
-                                fHand.fileMode = "w";
+                                fHand.openMode = "w";
                                 break;
                             case "file":
                                 fHand.filePath = Path.GetFullPath(@args[argIdx + 1]);
                                 break;
                             case "delay1":
                                 fHand.timeToKeepOpen1 = Convert.ToInt32(args[argIdx + 1]);
-                                break;
-                            case "writeContent":
-                                fHand.writeContent = true;
                                 break;
                             case "delay2":
                                 fHand.timeToKeepOpen2 = Convert.ToInt32(args[argIdx + 1]);
@@ -95,7 +91,7 @@ namespace keepItOpen
                     
                     // ~~~~~~~~~~~~~~~~~~~~ Checking data validity ~~~~~~~~~~~~~~~~~~~~
                     // ~~ r/w mode
-                    if ((fHand.fileMode != "r") && (fHand.fileMode != "w"))
+                    if ((fHand.openMode != "r") && (fHand.openMode != "w"))
                     {
                         Console.WriteLine();
                         Console.WriteLine("Error in 'mode' argument!");
@@ -142,19 +138,8 @@ namespace keepItOpen
                         Console.Read();
                         Environment.Exit(1);
                     }
-                    // ~~ add extra content to the file?
-                    if (fHand.writeContent == true)
-                    {
-                        if (fHand.fileMode == "r")
-                        {
-                            Console.WriteLine();
-                            Console.WriteLine("File opened in READ mode. 'writeContent' will be ignored!");
-                            Console.WriteLine();
-                            fHand.writeContent = false;
-                        }
-                    }
                     // ~~ Getting 2nd time delay in seconds
-                    if ((fHand.timeToKeepOpen1 < 0) || (fHand.timeToKeepOpen1 > 3600))
+                    if ((fHand.timeToKeepOpen2 < 0) || (fHand.timeToKeepOpen2 > 3600))
                     {
                         Console.WriteLine();
                         Console.WriteLine("Error in 2nd delay argument!");
@@ -162,6 +147,14 @@ namespace keepItOpen
                         Console.WriteLine();
                         Console.Read();
                         Environment.Exit(1);
+                    }
+                    else
+                    {
+                        if ((fHand.openMode == "r") && (fHand.timeToKeepOpen2 != 0))
+                        {
+                            Console.WriteLine();
+                            Console.WriteLine("READ mode selected. Extra delay ('delay2') will be ignored!");
+                        }
                     }
                     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 }
@@ -175,14 +168,14 @@ namespace keepItOpen
                 }
             }       // ------------------------------------------------------------------------------------------------
 
-            // If NOT 'silent mode' switch, display arguments else continue with the program
+            // If NOT 'silent mode' display arguments, else continue with the program
             if (!fHand.silentMode)
                 dArgs.displayArgs();
             else
                 fHand.openFile();
 
             Console.WriteLine();
-            Console.WriteLine("Press any key to exit...");
+            Console.WriteLine("Press 'enter' to exit...");
             Console.Read();
             Environment.Exit(0);        // Exiting
         }
