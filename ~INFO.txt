@@ -1,8 +1,0 @@
-Version 2:
-	~ bug fix: 		- 
-				
-	~ add:			- 
-
-	~ known issues:		- 
-				
-				
