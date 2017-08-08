@@ -43,20 +43,7 @@ namespace KeepItOpen
                     + fHand.timeToKeepOpen2.ToString()
                     + " seconds will be added before closing.";
             // --------------------------------------
-
-            // ~~~ TEMPORARY - EXCEL NOT READY YET! ~~~
-            if (fHand.fileFormat == 1)
-            {
-                Console.WriteLine();
-                Console.WriteLine();
-                Console.WriteLine("   ~~~ Excel part is not implemented yet! ~~~   ");
-                Console.WriteLine("   ~~~ Please wait for the next release! ~~~   ");
-                Console.WriteLine();
-                Console.WriteLine();
-                return;
-            }
-            // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+            
             Console.WriteLine();
             Console.WriteLine(" Opening " + tempFileFormat + " in " + tempOpenMode + " mode.");
             Console.WriteLine(" File will be kept open for " + fHand.timeToKeepOpen1.ToString() + " seconds.");
@@ -70,13 +57,13 @@ namespace KeepItOpen
             {
                 Console.WriteLine();
                 Console.WriteLine("Exiting ...");
-                Environment.Exit(1);
+                Environment.Exit(0);
             }
             else if (continueYN.ToLower() == "y")
             {
                 fHand.openFile();
             }
-            else if (continueYN.ToLower() != "y")
+            else
             {
                 Console.WriteLine();
                 Console.WriteLine("Wrong input!");

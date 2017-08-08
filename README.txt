@@ -31,7 +31,7 @@ Instructions:
 	In case this argument is missing, you will be presented a sum of the arguments
 	and will be asked to confirm.
 
-Arguments (1) , (2) & (3) are always needed. Arguments (4) & (5) can be skipped.
+Arguments (1) , (2) & (3) are mandatory. Arguments (4) & (5) can be skipped.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Check "args tests.txt" file for some examples.
